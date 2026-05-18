@@ -1,0 +1,25 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+.pytest_cache/
+.ipynb_checkpoints/
+
+# uv
+uv.lock
+
+# Data — never commit real or generated financial data
+data/
+*.csv
+*.parquet
+
+# Outputs
+figures/
+*.png
+
+# Editor / OS
+.DS_Store
+.vscode/
+.idea/

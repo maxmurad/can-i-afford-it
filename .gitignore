@@ -1,0 +1,33 @@
+# OS / editor
+.DS_Store
+.vscode/
+.idea/
+*.swp
+
+# Python (defensive — prototype/ has its own .gitignore too)
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+.pytest_cache/
+.ipynb_checkpoints/
+uv.lock
+
+# Local data — never commit real or generated financial data
+data/
+*.csv
+*.parquet
+
+# Generated figures (keep these out unless you want them in-repo)
+prototype/figures/
+
+# Leftover archive from earlier zip workflow
+prototype.zip
+*.zip
+
+# Secrets — defensive even though this repo has none today
+.env
+.env.local
+*.key
+*.pem
