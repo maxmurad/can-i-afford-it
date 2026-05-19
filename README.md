@@ -14,6 +14,17 @@ The project is two artifacts: a written strategy and a working technical prototy
 
 [`prototype/`](prototype/) is the buildable, runnable Python implementation. All five core milestones from the design doc are complete; see the prototype's [README](prototype/README.md) for the pipeline diagram, build status, and headline results.
 
+## Quick start
+
+```bash
+git clone https://github.com/maxmurad/can-i-afford-it.git
+cd can-i-afford-it/prototype
+uv sync
+uv run python notebooks/05_calibration.py
+```
+
+That runs the full 80-household calibration backtest end-to-end and reproduces the headline numbers below.
+
 ## Headline results from the prototype
 
 Validated on 80 synthetic households (4 personas × 20 seeds) with 800 random affordability questions:
@@ -21,6 +32,35 @@ Validated on 80 synthetic households (4 personas × 20 seeds) with 800 random af
 - **False-affordable rate: 0.6%** — the trust-destroying error (telling a user "yes" before an overdraft) is rare by design.
 - **Recurring-bill detection: 100% precision, 100% recall, 100% cadence accuracy** across all four personas including the subscription-heavy stress case.
 - **Calibration error: 8.2%**, with the predictive intervals slightly tight — a known limitation of the single-Normal-per-day-of-week amount model. The improvement direction is identified (mixture-of-Normals or Student's t in Stage 3).
+
+![Reliability diagram — calibration of predictive intervals](prototype/figures/05_reliability.png)
+
+## What the API looks like
+
+After fitting Stages 1–3 on a household's transaction history, the Monte Carlo projection and affordability query are a few lines:
+
+```python
+from cashflow.projection import project, can_i_afford
+
+projection = project(
+    current_balance=4_000,
+    start_date="2024-12-01",
+    horizon_days=30,
+    recurring=schedules,            # from detect_recurring()
+    income=income_forecast,         # from forecast_income()
+    discretionary=discretionary_model,  # from fit_discretionary()
+    n_sims=5_000,
+)
+
+answer = can_i_afford(projection, amount=500, on_date="2024-12-15")
+
+answer.verdict             # -> "tight"
+answer.prob_below_buffer   # -> 0.19
+answer.low_point_date      # -> Timestamp("2024-12-22")
+answer.driving_obligation  # -> "geico"
+```
+
+The verdict is graded ("affordable" / "tight" / "not affordable") rather than a bare yes/no, and the engine surfaces *when* the low point lands and *which* recurring obligation drives it — so the user gets a reason, not just an answer.
 
 ## What this is not
 

@@ -58,6 +58,8 @@ Honest reads:
 
 ### M4 results (5,000 sims × 30-day horizon, seed=0)
 
+![Projected balance ribbons vs actual holdout trajectories](figures/04_projection_vs_actual.png)
+
 The Monte Carlo projection runs end-to-end and `can_i_afford()` produces
 verdicts that track each profile's structure:
 
@@ -80,6 +82,8 @@ across many seeds. The projection mechanics, query, and driver
 attribution are all working as designed.
 
 ### M5 results (4 profiles × 20 seeds = 80 households, 2,400 point-days, 800 decisions)
+
+![Reliability diagram — calibration of predictive intervals](figures/05_reliability.png)
 
 **The headline number — false-affordable rate is 0.6%.** Out of 800
 random affordability questions across 80 synthetic households, the
