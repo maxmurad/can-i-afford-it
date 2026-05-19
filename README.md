@@ -28,4 +28,4 @@ This is not a venture pitch and not an app. It is a strategy document plus a not
 
 ## Author
 
-Max Murad — ex-JPMorgan Chase consumer-banking data platform (~12 years), most recently TPM at Meta on Ads ML and Quest personalization.
+Max Murad — ex-JPMorgan Chase consumer-banking data platform (~12 years), most recently at Meta on Ads ML and Quest personalization.

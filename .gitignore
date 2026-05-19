@@ -19,8 +19,6 @@ data/
 *.csv
 *.parquet
 
-# Generated figures (keep these out unless you want them in-repo)
-prototype/figures/
 
 # Leftover archive from earlier zip workflow
 prototype.zip
