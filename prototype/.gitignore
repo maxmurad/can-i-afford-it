@@ -15,10 +15,6 @@ data/
 *.csv
 *.parquet
 
-# Outputs
-figures/
-*.png
-
 # Editor / OS
 .DS_Store
 .vscode/
