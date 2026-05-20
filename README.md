@@ -12,7 +12,7 @@ The project is two artifacts: a written strategy and a working technical prototy
 
 [Prediction Model Design](PREDICTION_MODEL_DESIGN.md) is the technical companion: a four-stage forecasting pipeline (recurring-bill detection, income timing, discretionary spending, Monte Carlo projection) feeding a calibrated affordability query, with an explicit evaluation methodology that treats calibration — not point accuracy — as the metric that matters.
 
-[`prototype/`](prototype/) is the buildable, runnable Python implementation. All five core milestones from the design doc are complete; see the prototype's [README](prototype/README.md) for the pipeline diagram, build status, and headline results.
+[`prototype/`](prototype/) is the buildable, runnable Python implementation. All five core milestones from the design doc are complete on synthetic data, plus M6 — the same pipeline now plumbed through to Plaid sandbox so it runs against real-API-shaped transactions. See the prototype's [README](prototype/README.md) for the pipeline diagram, build status, and headline results.
 
 ## Quick start
 

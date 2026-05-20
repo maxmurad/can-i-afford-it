@@ -10,10 +10,12 @@ venv/
 # uv
 uv.lock
 
-# Data — never commit real or generated financial data
-data/
+# Tabular data dumps — never commit real or generated financial data
 *.csv
 *.parquet
+
+# Plaid sandbox cache (contains access tokens + raw API responses)
+cache/
 
 # Editor / OS
 .DS_Store

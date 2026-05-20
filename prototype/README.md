@@ -19,6 +19,9 @@ Notebook-provable cash-flow prediction engine for the "Can I Afford It?" project
 | `notebooks/04_projection.py` | M4 | **runnable** — projection vs actual + affordability questions |
 | `eval/backtest.py` (calibration / decision) | M5 | **implemented** — pooled calibration + decision confusion matrix |
 | `notebooks/05_calibration.py` | M5 | **runnable** — 80-household backtest, reliability curve, FAR |
+| `data/plaid_loader.py` + `data/normalize.py` | M6 | **implemented** — Plaid sandbox loader + schema adapter + balance reconstruction |
+| `eval/backtest.py` (`run_real_data_backtest`) | M6 | **implemented** — calibration + decision backtest on real-API data |
+| `notebooks/06_plaid_calibration.py` | M6 | **runnable** — same M5 eval on Plaid-sourced data (needs PLAID_* keys in .env) |
 
 ### M2 results (synthetic backtest, seed=0, 365-day window)
 
@@ -123,6 +126,8 @@ curl -LsSf https://astral.sh/uv/install.sh | sh   # if uv not installed
 uv sync
 ```
 
+For the M6 Plaid backtest only, you also need Plaid sandbox credentials. Copy `.env.example` to `.env` and fill in `PLAID_CLIENT_ID` + `PLAID_SECRET` from [dashboard.plaid.com](https://dashboard.plaid.com/team/keys). M1–M5 run without any keys.
+
 ## Run the M1 exploration
 
 ```bash
@@ -130,6 +135,16 @@ uv run python notebooks/01_explore_synthetic_data.py
 ```
 
 This generates a household from each preset profile, prints summaries and the transaction mix, shows the ground-truth schedules the model must recover, plots running-balance trajectories to `figures/`, and runs sanity checks.
+
+## Run the M6 Plaid sandbox backtest
+
+```bash
+uv run python notebooks/06_plaid_calibration.py
+```
+
+Plaid's default sandbox user is too thin to backtest (~48 transactions), so M6 uses Plaid's **custom sandbox user**: generator-built households are pushed *through* the real Plaid API (Item creation with a custom-user override) and pulled back via `/transactions/get`. First run hits the API and caches responses to `cache/` (gitignored); re-runs read from cache.
+
+This validates the full integration path — Plaid auth, Item creation, pagination, the Plaid→internal schema adapter, balance reconstruction — against genuine API endpoints. It is a **plumbing test**: the data is our own, round-tripped, so the calibration numbers mirror M5. Independent validation of the model requires real consented accounts, which is the step beyond sandbox.
 
 ## How the pieces fit
 

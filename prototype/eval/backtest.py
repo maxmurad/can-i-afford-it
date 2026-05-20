@@ -460,3 +460,134 @@ def run_full_backtest(
         "results": results,
         "decisions_df": decisions_df,
     }
+
+
+# ---------------------------------------------------------------------------
+# M6 — Real-data backtest (Plaid sandbox or any pre-normalized dataset)
+# ---------------------------------------------------------------------------
+
+
+def run_real_data_backtest(
+    datasets: list[tuple[str, pd.DataFrame, pd.Series]],
+    holdout_days: int = 30,
+    n_sims: int = 2000,
+    decisions_per_run: int = 10,
+    safety_buffer: float = 100.0,
+    decision_amount_range: tuple[float, float] = (50.0, 2500.0),
+) -> dict:
+    """Run the M5-style backtest on real (non-synthetic) datasets.
+
+    Args:
+        datasets: list of (label, normalized_ledger_df, balance_series).
+                  The DataFrame uses the internal schema; the Series is
+                  the reconstructed daily end-of-day balance.
+        ... rest same as run_full_backtest.
+
+    Detection eval is dropped (no ground-truth `is_recurring` labels on
+    real data). Calibration and decision eval still work — they only need
+    the actual balance trajectory, which we reconstructed from current
+    balance + transaction history.
+
+    Returns the same dict shape as run_full_backtest minus the
+    profile/seed-level breakdown labels.
+    """
+    actuals_per_run: list[np.ndarray] = []
+    bands_per_run: dict[int, list[np.ndarray]] = {p: [] for p in (5, 10, 25, 50, 75, 90, 95)}
+    label_labels: list[np.ndarray] = []
+    decision_records: list[dict] = []
+    decision_rng = np.random.default_rng(42)
+
+    for label, ledger, balance_series in datasets:
+        if ledger.empty or balance_series.empty:
+            continue
+        history, _ = split_holdout(ledger, holdout_days=holdout_days)
+        if history.empty:
+            continue
+
+        last_hist_day = history["date"].max().normalize()
+        if last_hist_day not in balance_series.index:
+            # Find the closest available index <= last_hist_day
+            valid = balance_series.index[balance_series.index <= last_hist_day]
+            if len(valid) == 0:
+                continue
+            last_hist_day = valid.max()
+        current_balance = float(balance_series.loc[last_hist_day])
+        horizon_start = last_hist_day + pd.Timedelta(days=1)
+
+        schedules = detect_recurring(history)
+        income = forecast_income(schedules, history, horizon_days=holdout_days)
+        _, disc_h = split_recurring_vs_discretionary(history, schedules)
+        disc_model = fit_discretionary(disc_h)
+
+        proj = project(
+            current_balance,
+            horizon_start,
+            holdout_days,
+            schedules,
+            income,
+            disc_model,
+            n_sims=n_sims,
+            seed=0,
+        )
+
+        actual = balance_series.reindex(proj.dates).ffill().bfill().values
+        if len(actual) != len(proj.dates) or np.isnan(actual).any():
+            # Skip if we cannot align actual to horizon
+            continue
+
+        p5 = np.percentile(proj.trajectories, 5, axis=0)
+        p95 = np.percentile(proj.trajectories, 95, axis=0)
+        this_bands = {
+            5: p5,
+            10: proj.percentile_bands[10],
+            25: proj.percentile_bands[25],
+            50: proj.median_path,
+            75: proj.percentile_bands[75],
+            90: proj.percentile_bands[90],
+            95: p95,
+        }
+
+        actuals_per_run.append(actual)
+        for p in bands_per_run:
+            bands_per_run[p].append(this_bands[p])
+        label_labels.append(np.array([label] * len(actual)))
+
+        for _ in range(decisions_per_run):
+            day_offset = int(decision_rng.integers(0, holdout_days))
+            amount = float(decision_rng.uniform(*decision_amount_range))
+            on_date = proj.dates[day_offset]
+            ans = can_i_afford(proj, amount, on_date, safety_buffer=safety_buffer)
+            actual_adjusted = actual.copy()
+            actual_adjusted[day_offset:] -= amount
+            breached = bool((actual_adjusted < safety_buffer).any())
+            decision_records.append(
+                {
+                    "label": label,
+                    "on_date": on_date,
+                    "amount": amount,
+                    "verdict": ans.verdict,
+                    "prob_breach": ans.prob_below_buffer,
+                    "actually_breached": breached,
+                }
+            )
+
+    if not actuals_per_run:
+        raise RuntimeError(
+            "No usable datasets — check that ledgers and balance series have "
+            "enough history (need >= holdout_days + a few weeks for fitting)."
+        )
+
+    results = BacktestResults(
+        actual_values=np.concatenate(actuals_per_run),
+        bands={p: np.concatenate(arrs) for p, arrs in bands_per_run.items()},
+        profile_labels=np.concatenate(label_labels),
+        seed_labels=np.zeros(sum(len(a) for a in actuals_per_run), dtype=int),
+    )
+    decisions_df = pd.DataFrame(decision_records)
+
+    return {
+        "calibration": score_calibration(results),
+        "decisions": score_decisions(decisions_df) if not decisions_df.empty else None,
+        "results": results,
+        "decisions_df": decisions_df,
+    }
